@@ -12,6 +12,7 @@ layer.py                   Layer made from many neurons
 mlp.py                     MLP and ReLU
 layer_norm.py              Custom and PyTorch LayerNorm
 patch_embedding.py         Image to patch-token embeddings
+head.py                    Single self-attention head
 layer_norm_demo.py         LayerNorm math demo
 transformer_block_demo.py  PyTorch transformer-block demo
 scratch_vit.py             Older scratch ViT notes/code

@@ -13,11 +13,11 @@ class Module(ABC):
         self._modules = []
 
     @abstractmethod
-    def forward(self,x) -> torch.Tensor:
+    def forward(self, *args, **kwargs) -> torch.Tensor:
         pass
 
-    def __call__(self,x):
-        return self.forward(x)
+    def __call__(self, *args, **kwargs):
+        return self.forward(*args, **kwargs)
 
     def parameters(self):
         params = []

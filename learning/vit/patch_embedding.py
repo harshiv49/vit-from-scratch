@@ -81,8 +81,8 @@ class ImagePatchEmbeddingTorchCompatible(Module):
         self.config = config if config is not None else VitConfig()
 
         self.patch_projection = LayerTorchCompatible(
-            number_of_neurons=self.config.embedding_dimension,
-            number_of_inputs=self.config.patch_dim,
+            input_dim=self.config.patch_dim,
+            output_dim=self.config.embedding_dimension,
         )
         self.add_module(self.patch_projection)
 

@@ -19,13 +19,13 @@ class MLP(Module):
         super().__init__()
 
         self.layer_1 = LayerTorchCompatible(
-            number_of_neurons=hidden_dim,
-            number_of_inputs=input_dim,
+            input_dim=input_dim,
+            output_dim=hidden_dim,
         )
         self.relu = ReLUTorchCompatible()
         self.layer_2 = LayerTorchCompatible(
-            number_of_neurons=output_dim,
-            number_of_inputs=hidden_dim,
+            input_dim=hidden_dim,
+            output_dim=output_dim,
         )
 
         self.layers = [self.layer_1, self.relu, self.layer_2]

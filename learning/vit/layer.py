@@ -24,10 +24,11 @@ class Layer:
 
 
 class LayerTorchCompatible(Module):
-    def __init__(self,number_of_neurons:int,number_of_inputs:int):
+    def __init__(self, input_dim: int, output_dim: int):
         super().__init__()
         # we need to add neurons to the submodules array since neuron in itself is also a module
-        self.neurons = [ NeuronTorchCompatible(number_of_inputs) for _ in range(number_of_neurons)  ]
+        # output_dim means how many neurons this layer has
+        self.neurons = [NeuronTorchCompatible(input_dim) for _ in range(output_dim)]
         
         for neuron in self.neurons:
           self.add_module(neuron)
@@ -47,10 +48,10 @@ class LayerTorchCompatible(Module):
 
 
 class TorchLayer(nn.Module):
-    def __init__(self, number_of_neurons: int, number_of_inputs: int):
+    def __init__(self, input_dim: int, output_dim: int):
         super().__init__()
         self.neurons = nn.ModuleList(
-            [TorchNeuron(number_of_inputs) for _ in range(number_of_neurons)]
+            [TorchNeuron(input_dim) for _ in range(output_dim)]
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

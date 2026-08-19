@@ -1,7 +1,7 @@
 """Small, explicit LayerNorm and BatchNorm comparison.
 
 Run from the repository root:
-    uv run python learning/cifar10_vit/normalization_math_demo.py
+    uv run python learning/vit/layer_norm_demo.py
 
 The example uses tokens shaped (batch, patches, features) = (2, 3, 4).
 It computes both normalization methods directly, then checks each result

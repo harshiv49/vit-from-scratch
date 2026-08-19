@@ -1,7 +1,7 @@
 """Small Vision Transformer block shape demo.
 
 Run from the repository root:
-    uv run python learning/cifar10_vit/vit_block_demo.py
+    uv run python learning/vit/transformer_block_demo.py
 
 This starts after patch projection. It assumes we already have tokens shaped:
     (batch, number_of_patches, embedding_dimension)

@@ -1,18 +1,21 @@
 # ViT from Scratch
 
-A learning repo for building a Vision Transformer piece by piece.
+Building a Vision Transformer from small pieces so the PyTorch abstractions feel less magical.
 
-The actual learning code lives under:
+The learning code lives here:
 
 ```text
-learning/cifar10_vit/
+learning/vit/
 ```
 
 Current pieces:
 
-- tiny custom `Module` abstraction
-- neuron, layer, and MLP blocks
-- ReLU
+- custom `Module` base class
+- neuron, layer, MLP, and ReLU
 - LayerNorm
-- image patch embeddings
+- image patch embedding
 - PyTorch `nn.Module` versions for comparison
+
+Next piece:
+
+- attention

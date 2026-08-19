@@ -8,12 +8,21 @@ from .layer import LayerTorchCompatible
 from .module import Module
 
 
-def extract_patches_manual(images: torch.Tensor, config: VitConfig) -> torch.Tensor:
-    all_patches: list[torch.Tensor] = []
-    _batch_size, _channels, height, width = images.shape
+def validate_patch_shape(images: torch.Tensor, config: VitConfig) -> tuple[int, int, int, int]:
+    batch_size, channels, height, width = images.shape
+
+    if channels != config.channels:
+        raise ValueError(f"expected {config.channels} channels, got {channels}")
 
     if height % config.patch_height != 0 or width % config.patch_width != 0:
         raise ValueError("image height/width must divide evenly by patch height/width")
+
+    return batch_size, channels, height, width
+
+
+def extract_patches_manual(images: torch.Tensor, config: VitConfig) -> torch.Tensor:
+    all_patches: list[torch.Tensor] = []
+    _batch_size, _channels, height, width = validate_patch_shape(images, config)
 
     for row in range(0, height, config.patch_height):
         for col in range(0, width, config.patch_width):
@@ -31,6 +40,26 @@ def extract_patches_manual(images: torch.Tensor, config: VitConfig) -> torch.Ten
 
     # patches shape: (batch_size, number_of_patches, patch_dim)
     return torch.stack(all_patches, dim=1)
+
+
+def extract_patches_tensor_unfold(images: torch.Tensor, config: VitConfig) -> torch.Tensor:
+    batch_size, channels, height, width = validate_patch_shape(images, config)
+
+    # shape: (batch_size, channels, patch_rows, patch_cols, patch_height, patch_width)
+    patches = images.unfold(2, config.patch_height, config.patch_height).unfold(
+        3,
+        config.patch_width,
+        config.patch_width,
+    )
+
+    patch_rows = height // config.patch_height
+    patch_cols = width // config.patch_width
+
+    # shape: (batch_size, patch_rows, patch_cols, channels, patch_height, patch_width)
+    patches = patches.permute(0, 2, 3, 1, 4, 5).contiguous()
+
+    # shape: (batch_size, number_of_patches, patch_dim)
+    return patches.view(batch_size, patch_rows * patch_cols, channels * config.patch_height * config.patch_width)
 
 
 class ImagePatchEmbeddingTorchCompatible(Module):
@@ -51,8 +80,13 @@ class ImagePatchEmbeddingTorchCompatible(Module):
         image_tokens = self.patch_projection(patches)
         return image_tokens
 
+    def convert_image_patches_to_embeddings_tensor_unfold(self, images: torch.Tensor) -> torch.Tensor:
+        patches = extract_patches_tensor_unfold(images, self.config)
+        image_tokens = self.patch_projection(patches)
+        return image_tokens
+
     def forward(self, images: torch.Tensor) -> torch.Tensor:
-        return self.convert_image_patches_to_embeddings_manual(images)
+        return self.convert_image_patches_to_embeddings_tensor_unfold(images)
 
 
 class TorchImagePatchEmbedding(nn.Module):
@@ -71,6 +105,11 @@ class TorchImagePatchEmbedding(nn.Module):
 
     def convert_image_patches_to_embeddings_manual(self, images: torch.Tensor) -> torch.Tensor:
         patches = extract_patches_manual(images, self.config)
+        image_tokens = self.patch_projection(patches)
+        return image_tokens
+
+    def convert_image_patches_to_embeddings_tensor_unfold(self, images: torch.Tensor) -> torch.Tensor:
+        patches = extract_patches_tensor_unfold(images, self.config)
         image_tokens = self.patch_projection(patches)
         return image_tokens
 

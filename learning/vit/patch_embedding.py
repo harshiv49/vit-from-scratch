@@ -26,7 +26,7 @@ def extract_patches_manual(images: torch.Tensor, config: VitConfig) -> torch.Ten
 
     for row in range(0, height, config.patch_height):
         for col in range(0, width, config.patch_width):
-            # patch shape: (batch_size, channels, patch_height, patch_width)
+            # patch (batch_size, channel, patch_height, patch_width)
             patch = images[
                 :,
                 :,
@@ -34,10 +34,15 @@ def extract_patches_manual(images: torch.Tensor, config: VitConfig) -> torch.Ten
                 col : col + config.patch_width,
             ]
 
-            # flattened patch shape: (batch_size, channels * patch_height * patch_width)
+            # we flatten from the channel dimension onward
+            # example with CIFAR-10 and 4x4 patches: (8, 3, 4, 4) -> (8, 48)
             patch = torch.flatten(patch, start_dim=1)
             all_patches.append(patch)
 
+    # For a square patch size P, assuming the image divides evenly:
+    # N = (H / P) × (W / P) = H × W / P².
+    # With H = W = 32 and P = 4, there are 8 × 8 = 64 patches.
+    # torch.stack combines multiple tensors by adding a new dimension.
     # patches shape: (batch_size, number_of_patches, patch_dim)
     return torch.stack(all_patches, dim=1)
 
@@ -45,7 +50,11 @@ def extract_patches_manual(images: torch.Tensor, config: VitConfig) -> torch.Ten
 def extract_patches_tensor_unfold(images: torch.Tensor, config: VitConfig) -> torch.Tensor:
     batch_size, channels, height, width = validate_patch_shape(images, config)
 
-    # shape: (batch_size, channels, patch_rows, patch_cols, patch_height, patch_width)
+    # First unfold over image height:
+    # (B, C, H, W) -> (B, C, patch_rows, W, patch_height)
+    # Then unfold over image width:
+    # (B, C, patch_rows, W, patch_height) ->
+    # (B, C, patch_rows, patch_cols, patch_height, patch_width)
     patches = images.unfold(2, config.patch_height, config.patch_height).unfold(
         3,
         config.patch_width,
@@ -55,10 +64,14 @@ def extract_patches_tensor_unfold(images: torch.Tensor, config: VitConfig) -> to
     patch_rows = height // config.patch_height
     patch_cols = width // config.patch_width
 
-    # shape: (batch_size, patch_rows, patch_cols, channels, patch_height, patch_width)
+    # Move patch grid before the patch contents:
+    # (B, C, patch_rows, patch_cols, patch_height, patch_width) ->
+    # (B, patch_rows, patch_cols, C, patch_height, patch_width)
     patches = patches.permute(0, 2, 3, 1, 4, 5).contiguous()
 
-    # shape: (batch_size, number_of_patches, patch_dim)
+    # Flatten each patch:
+    # (B, patch_rows, patch_cols, C, patch_height, patch_width) ->
+    # (B, number_of_patches, C * patch_height * patch_width)
     return patches.view(batch_size, patch_rows * patch_cols, channels * config.patch_height * config.patch_width)
 
 
@@ -73,6 +86,7 @@ class ImagePatchEmbeddingTorchCompatible(Module):
         )
         self.add_module(self.patch_projection)
 
+    # image into image embeddings
     def convert_image_patches_to_embeddings_manual(self, images: torch.Tensor) -> torch.Tensor:
         patches = extract_patches_manual(images, self.config)
 
@@ -103,6 +117,7 @@ class TorchImagePatchEmbedding(nn.Module):
             stride=(self.config.patch_height, self.config.patch_width),
         )
 
+    # image into image embeddings
     def convert_image_patches_to_embeddings_manual(self, images: torch.Tensor) -> torch.Tensor:
         patches = extract_patches_manual(images, self.config)
         image_tokens = self.patch_projection(patches)

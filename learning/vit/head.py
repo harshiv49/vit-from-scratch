@@ -68,3 +68,60 @@ class TorchHead(nn.Module):
         weights = torch.softmax(scores, dim=-1)
         output = weights @ value
         return output
+
+
+class MultiHeadAttention(Module):
+    def __init__(self, config: VitConfig | None = None):
+        super().__init__()
+        self.config = config if config is not None else VitConfig()
+
+        if self.config.number_of_heads * self.config.head_size != self.config.embedding_dimension:
+            raise ValueError("number_of_heads * head_size must equal embedding_dimension")
+
+        self.heads = [Head(self.config) for _ in range(self.config.number_of_heads)]
+        for head in self.heads:
+            self.add_module(head)
+
+        self.output_projection = LayerTorchCompatible(
+            input_dim=self.config.number_of_heads * self.config.head_size,
+            output_dim=self.config.embedding_dimension,
+        )
+        self.add_module(self.output_projection)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        outputs: list[torch.Tensor] = []
+
+        for head in self.heads:
+            outputs.append(head(x))
+
+        # concat shape: (batch_size, number_of_patches, number_of_heads * head_size)
+        concat = torch.cat(outputs, dim=-1)
+
+        # output shape: (batch_size, number_of_patches, embedding_dimension)
+        output = self.output_projection(concat)
+        return output
+
+
+class TorchMultiHeadAttention(nn.Module):
+    def __init__(self, config: VitConfig | None = None):
+        super().__init__()
+        self.config = config if config is not None else VitConfig()
+
+        if self.config.number_of_heads * self.config.head_size != self.config.embedding_dimension:
+            raise ValueError("number_of_heads * head_size must equal embedding_dimension")
+
+        self.heads = nn.ModuleList([TorchHead(self.config) for _ in range(self.config.number_of_heads)])
+        self.output_projection = nn.Linear(
+            self.config.number_of_heads * self.config.head_size,
+            self.config.embedding_dimension,
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        outputs: list[torch.Tensor] = []
+
+        for head in self.heads:
+            outputs.append(head(x))
+
+        concat = torch.cat(outputs, dim=-1)
+        output = self.output_projection(concat)
+        return output

@@ -12,6 +12,7 @@ class VitConfig:
     patch_width: int = 4
     embedding_dimension: int = 192
     head_size: int = 16
+    number_of_heads: int = 12
     number_of_classes: int = 10
 
     @property
